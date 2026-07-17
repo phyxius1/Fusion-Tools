@@ -2,7 +2,7 @@
 
 A Fusion 360 add-in that cuts a **randomized, aperiodic, depth‑randomized spherical‑cap
 dimple texture** into a selected planar face. It was built as an acoustic scattering
-texture for the non‑active face of an ultrasonic delay line, but it works on any planar
+texture, but it works on any planar
 face and is fully parameterized through a native command dialog.
 
 ![Dimple pattern generated on a 34 × 11.9 mm face](docs/pattern.png)
