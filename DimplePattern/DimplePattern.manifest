@@ -1,0 +1,11 @@
+{
+    "autodeskProduct": "Fusion360",
+    "type": "addin",
+    "author": "Joshua Jacobs",
+    "description": {
+        "": "Cuts a randomized, aperiodic, depth-randomized spherical-cap dimple texture into a selected planar face (acoustic scattering texture for an ultrasonic delay line). All parameters exposed in the command dialog."
+    },
+    "supportedOS": "windows|mac",
+    "editEnabled": true,
+    "runOnStartup": true
+}
