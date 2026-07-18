@@ -2,7 +2,7 @@
 
 A Fusion 360 add-in that cuts a **randomized, aperiodic, depth‑randomized spherical‑cap
 dimple texture** into a selected planar face. It was built as an acoustic scattering
-texture, but it works on any planar
+texture for the non‑active face of an ultrasonic delay line, but it works on any planar
 face and is fully parameterized through a native command dialog.
 
 ![Dimple pattern generated on a 34 × 11.9 mm face](docs/pattern.png)
@@ -87,6 +87,7 @@ coverage settings collapsed by default.*
 | Coverage (advanced) | Interior / Border raster step | 0.25 / 0.20 mm |
 | Coverage (advanced) | Fill spacing fraction | 0.55 |
 | Coverage (advanced) | Random seed | 20260717 |
+| Output | Add CAM drill points (dimple bottoms) | on |
 
 All length fields use real Fusion units, so you can type `3.175 mm` or `1/8 in`.
 
@@ -158,6 +159,33 @@ All length fields use real Fusion units, so you can type `3.175 mm` or `1/8 in`.
   more separated fill dimples; lower → tighter fill.
 - **Random seed** — makes the whole pattern deterministic and reproducible. Change it to get
   a different (but statistically identical) arrangement; keep it fixed to reproduce a part.
+
+### Output (CAM)
+
+- **Add CAM drill points (dimple bottoms)** — also creates a sketch named
+  **`Dimple drill points`** containing one sketch point at the *bottom‑centre* (the deepest
+  vertex) of every dimple, at that dimple's true depth. These give CAM a single, clean set of
+  drill targets — see [Machining (CAM)](#machining-cam). Turn it off if you only want the cut
+  geometry.
+
+## Machining (CAM)
+
+The dimples are hard to program as freeform pockets, but they don't need to be: each dimple is
+exactly the shape a **ball‑end mill of the cutter diameter** leaves when it plunges straight in.
+So the whole texture reduces to a **drilling / plunge** operation.
+
+With **Add CAM drill points** enabled, the add‑in leaves a `Dimple drill points` sketch with one
+point at each dimple's bottom‑centre (at the real per‑dimple depth). To machine:
+
+1. Use a **ball‑end mill whose diameter matches the "Ball / cutter diameter" parameter**.
+2. Create a **Drilling** operation and select the `Dimple drill points` sketch as the geometry.
+3. Set the drill **bottom height to the selected point** (zero offset) so the tool *tip*
+   reaches each vertex. Because each point carries its own Z, one operation cuts every dimple
+   at its correct depth — no per‑dimple setup.
+
+When the ball‑mill tip reaches a vertex, the ball sits exactly where the modeled cutting sphere
+was, so the plunge reproduces that dimple's spherical cap precisely. (A spot/centre‑drill can be
+used the same way if you only need locating divots.)
 
 ## How it works (pipeline)
 
