@@ -57,6 +57,7 @@ DEFAULTS = {
     'fill_passes': 3, 'border_passes': 8, 'poisson_k': 30,
     'fill_raster': 0.25, 'border_raster': 0.20, 'fill_spacing_frac': 0.55,
     'seed': 20260717,
+    'drill_points': True,
 }
 
 
@@ -514,6 +515,7 @@ def _params_from_inputs(inputs):
         'border_passes': inputs.itemById('border_passes').value,
         'poisson_k': inputs.itemById('poisson_k').value,
         'seed': inputs.itemById('seed').value,
+        'drill_points': inputs.itemById('drill_points').value,
     }
 
 
@@ -595,6 +597,30 @@ def _run_dimples(face, params):
         comb_in.isKeepToolBodies = False
         created.append(root.features.combineFeatures.add(comb_in))
 
+        # --- optional CAM drill points at each dimple's bottom-centre (cap vertex) ---
+        # One sketch point per dimple at depth h below the surface along the inward normal.
+        # A ball-mill Drilling op that plunges the tool tip to each point reproduces the
+        # dimple exactly (the ball then sits where the cut sphere was), and per-point Z gives
+        # each dimple its own depth in a single operation.
+        n_drill = 0
+        if params.get('drill_points'):
+            sk = root.sketches.add(root.xYConstructionPlane)
+            sk.name = 'Dimple drill points'
+            sk.isComputeDeferred = True
+            spts = sk.sketchPoints
+            for d in dimples:
+                sx = origin.x + (d['x'] * u_dir.x + d['y'] * v_dir.x) * MM_TO_CM
+                sy = origin.y + (d['x'] * u_dir.y + d['y'] * v_dir.y) * MM_TO_CM
+                sz = origin.z + (d['x'] * u_dir.z + d['y'] * v_dir.z) * MM_TO_CM
+                hh = d['depth'] * MM_TO_CM
+                spts.add(adsk.core.Point3D.create(sx - normal.x * hh,
+                                                  sy - normal.y * hh,
+                                                  sz - normal.z * hh))
+            sk.isComputeDeferred = False
+            created.append(sk)
+            n_drill = len(dimples)
+        stats['drill_points'] = n_drill
+
         ok_guard = tl.count >= pre_count
         if ok_guard:
             for i, tok in enumerate(pre_tokens):
@@ -638,11 +664,13 @@ class _ExecuteHandler(adsk.core.CommandEventHandler):
             ui.messageBox(
                 "Dimples placed: {c} (poisson {p} + fill {f} + border {b} + corner {k})\n"
                 "Depth: {dl:.3f} - {dh:.3f} mm   Surface dia: {rl:.2f} - {rh:.2f} mm\n"
-                "Min land (rim to boundary): {ml:.3f} mm".format(
+                "Min land (rim to boundary): {ml:.3f} mm\n"
+                "CAM drill points: {dp} (sketch 'Dimple drill points')".format(
                     c=stats['count'], p=stats['poisson_count'], f=stats['fill_count'],
                     b=stats['densify_count'], k=stats['corner_count'],
                     dl=stats['depth_min'], dh=stats['depth_max'],
-                    rl=2 * stats['radius_min'], rh=2 * stats['radius_max'], ml=stats['min_land']))
+                    rl=2 * stats['radius_min'], rh=2 * stats['radius_max'], ml=stats['min_land'],
+                    dp=stats.get('drill_points', 0)))
         except:
             ui.messageBox('Dimple Pattern failed:\n{}'.format(traceback.format_exc()))
 
@@ -677,6 +705,9 @@ class _CreatedHandler(adsk.core.CommandCreatedEventHandler):
             sel = inputs.addSelectionInput('face', 'Target face', 'Select one planar face')
             sel.addSelectionFilter('PlanarFaces')
             sel.setSelectionLimits(1, 1)
+
+            inputs.addBoolValueInput('drill_points', 'Add CAM drill points (dimple bottoms)',
+                                     True, '', DEFAULTS['drill_points'])
 
             g1 = inputs.addGroupCommandInput('g_cutter', 'Cutter & depth')
             c1 = g1.children
